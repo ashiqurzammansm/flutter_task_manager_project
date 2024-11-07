@@ -1,38 +1,62 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
-import '../services/task_database.dart';
 
 class TaskList extends StatelessWidget {
+  final List<Task> tasks;
+  final Function(int) deleteTask;
+  final Function(int) toggleTaskCompletion;
+
+  TaskList({
+    required this.tasks,
+    required this.deleteTask,
+    required this.toggleTaskCompletion,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Task>>(
-      future: TaskDatabase.instance.readAllTasks(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator());
-        }
-        final tasks = snapshot.data!;
-        return ListView.builder(
-          itemCount: tasks.length,
-          itemBuilder: (context, index) {
-            final task = tasks[index];
-            return ListTile(
-              title: Text(task.title),
-              subtitle: Text(task.description),
-              trailing: IconButton(
-                icon: Icon(task.isCompleted ? Icons.check_circle : Icons.circle),
-                onPressed: () {
-                  Task updatedTask = Task(
-                    id: task.id,
-                    title: task.title,
-                    description: task.description,
-                    isCompleted: !task.isCompleted,
-                  );
-                  TaskDatabase.instance.updateTask(updatedTask);
-                },
+    if (tasks.isEmpty) {
+      return Center(child: Text('No tasks found!'));
+    }
+
+    return ListView.builder(
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return Card(
+          elevation: 4,
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.all(16.0),
+            title: Text(
+              task.title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18.0,
+                color: task.isCompleted ? Colors.grey : Colors.black87,
+                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
               ),
-            );
-          },
+            ),
+            subtitle: Text(task.description, style: TextStyle(color: Colors.black54)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: task.isCompleted ? Colors.green : Colors.grey,
+                  ),
+                  onPressed: () => toggleTaskCompletion(index), // Toggle completion status
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => deleteTask(index), // Delete the task
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

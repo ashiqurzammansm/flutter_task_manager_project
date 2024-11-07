@@ -18,7 +18,12 @@ class TaskDatabase {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 2, // Version number for database upgrades
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
+    );
   }
 
   Future _createDB(Database db, int version) async {
@@ -31,35 +36,70 @@ class TaskDatabase {
         id $idType,
         title $textType,
         description $textType,
+        startDateTime $textType,
+        completionDateTime $textType,
         isCompleted $boolType
       )
     ''');
   }
 
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Adding new columns for start and completion date-time
+      await db.execute('ALTER TABLE tasks ADD COLUMN startDateTime TEXT');
+      await db.execute('ALTER TABLE tasks ADD COLUMN completionDateTime TEXT');
+    }
+  }
+
   Future<void> createTask(Task task) async {
     final db = await instance.database;
-    await db.insert('tasks', task.toMap());
+    try {
+      await db.insert('tasks', task.toMap());
+    } catch (e) {
+      print('Error creating task: $e');
+    }
   }
 
   Future<List<Task>> readAllTasks() async {
     final db = await instance.database;
-    final result = await db.query('tasks');
-
-    return result.map((map) => Task.fromMap(map)).toList();
+    try {
+      final result = await db.query('tasks');
+      return result.map((map) => Task.fromMap(map)).toList();
+    } catch (e) {
+      print('Error reading tasks: $e');
+      return [];
+    }
   }
 
   Future<void> updateTask(Task task) async {
     final db = await instance.database;
-    await db.update('tasks', task.toMap(), where: 'id = ?', whereArgs: [task.id]);
+    try {
+      await db.update(
+        'tasks',
+        task.toMap(),
+        where: 'id = ?',
+        whereArgs: [task.id],
+      );
+    } catch (e) {
+      print('Error updating task: $e');
+    }
   }
 
   Future<void> deleteTask(int id) async {
     final db = await instance.database;
-    await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+    try {
+      await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      print('Error deleting task: $e');
+    }
   }
 
-  Future close() async {
+  Future<void> close() async {
     final db = await instance.database;
-    db.close();
+    try {
+      await db.close();
+    } catch (e) {
+      print('Error closing database: $e');
+    }
   }
 }
